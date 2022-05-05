@@ -1,0 +1,172 @@
+---
+# Adapted from the example in this repo: https://github.com/kubernetes-sigs/custom-metrics-apiserver
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: subleq-autoscaler-metrics
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: subleq-autoscaler-metrics:system:auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: subleq-autoscaler-metrics-apiserver
+  namespace: subleq-autoscaler-metrics
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: subleq-autoscaler-metrics-auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: subleq-autoscaler-metrics-apiserver
+  namespace: subleq-autoscaler-metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: subleq-autoscaler-metrics-apiserver
+  name: subleq-autoscaler-metrics-apiserver
+  namespace: subleq-autoscaler-metrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: subleq-autoscaler-metrics-apiserver
+  template:
+    metadata:
+      labels:
+        app: subleq-autoscaler-metrics-apiserver
+      name: subleq-autoscaler-metrics-apiserver
+    spec:
+      serviceAccountName: subleq-autoscaler-metrics-apiserver
+      containers:
+      - name: subleq-autoscaler-metrics-apiserver
+        image: natalieserrino/subleq-autoscaler:0.0.1
+        imagePullPolicy: Always
+        args:
+        - /adapter
+        - --secure-port=6443
+        ports:
+        - containerPort: 6443
+          name: https
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - mountPath: /tmp
+          name: temp-vol
+      volumes:
+      - name: temp-vol
+        emptyDir: {}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: subleq-autoscaler-metrics-resource-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: subleq-autoscaler-metrics-resource-reader
+subjects:
+- kind: ServiceAccount
+  name: subleq-autoscaler-metrics-apiserver
+  namespace: subleq-autoscaler-metrics
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: subleq-autoscaler-metrics-apiserver
+  namespace: subleq-autoscaler-metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: subleq-autoscaler-metrics-apiserver
+  namespace: subleq-autoscaler-metrics
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: 6443
+  - name: http
+    port: 80
+    targetPort: 8080
+  selector:
+    app: subleq-autoscaler-metrics-apiserver
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta1.custom.metrics.k8s.io
+spec:
+  service:
+    name: subleq-autoscaler-metrics-apiserver
+    namespace: subleq-autoscaler-metrics
+  group: custom.metrics.k8s.io
+  version: v1beta1
+  insecureSkipTLSVerify: true
+  groupPriorityMinimum: 100
+  versionPriority: 100
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1beta2.custom.metrics.k8s.io
+spec:
+  service:
+    name: subleq-autoscaler-metrics-apiserver
+    namespace: subleq-autoscaler-metrics
+  group: custom.metrics.k8s.io
+  version: v1beta2
+  insecureSkipTLSVerify: true
+  groupPriorityMinimum: 100
+  versionPriority: 200
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: subleq-autoscaler-metrics-server-resources
+rules:
+- apiGroups:
+  - custom.metrics.k8s.io
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: subleq-autoscaler-metrics-resource-reader
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hpa-controller-subleq-autoscaler-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: subleq-autoscaler-metrics-server-resources
+subjects:
+- kind: ServiceAccount
+  name: horizontal-pod-autoscaler
+  namespace: kube-system
