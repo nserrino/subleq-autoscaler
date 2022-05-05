@@ -53,7 +53,7 @@ kubectl apply -f subleq-autoscaler-metrics.yaml
 kubectl apply -f demo-app.yaml
 ```
 
-3. Watch for the output, which will "print out" `hi`:
+3. Watch for the output, which will "print out" `Hi`:
 
 ```
 # watch on Linux, or equivalent command on other OS.
@@ -61,12 +61,15 @@ watch -n 1 'kubectl get pods | grep Running | wc -l'
 ```
 
 The number of running pods in the demo app should hit the following values:
-0s: 1 (output value of -1, `subleq` program hasn't started)
-30s: 2 (output value of 0 - blank)
-60s: 74 (output value of 72, corresponding to ASCII 'H')
-90s: 107 (output value of 105, corresponding to ASCII 'i')
-120s: 2 (output value of 0 - blank)
-150s+: 1 (output value of -1, `subleq` program has terminated)
+
+| Time | Number of Pods | Corresponding Output Value | Notes |
+|------|----------------|----------------------------|-------|
+| 0s | 1 | -1 | `subleq` program hasn't started |
+| 30s | 2 | 0 | Empty output |
+| 60s | 74 | 72 | Corresponding to ASCII `H` |
+| 90s | 107 | 105 | Corresponding to ASCII `i` |
+| 120s | 2 | 0 | Empty output |
+| 150s+ | 1 | -1 | `subleq` program has terminated |
 
 There will be a transition period between the output values as the number of pods rises and falls, so the output value should be sampled every 30s.
 
