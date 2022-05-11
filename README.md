@@ -65,11 +65,10 @@ The number of running pods in the demo app should hit the following values:
 | Time | Number of Pods | Corresponding Output Value | Notes |
 |------|----------------|----------------------------|-------|
 | 0s | 1 | -1 | `subleq` program hasn't started |
-| 30s | 2 | 0 | Empty output |
-| 60s | 74 | 72 | Corresponding to ASCII `H` |
-| 90s | 107 | 105 | Corresponding to ASCII `i` |
-| 120s | 2 | 0 | Empty output |
-| 150s+ | 1 | -1 | `subleq` program has terminated |
+| 30s | 74 | 72 | Corresponding to ASCII `H` |
+| 60s | 107 | 105 | Corresponding to ASCII `i` |
+| 90s | 2 | 0 | Empty output |
+| 120s+ | 1 | -1 | `subleq` program has terminated |
 
 There will be a transition period between the output values as the number of pods rises and falls, so the output value should be sampled every 30s.
 
